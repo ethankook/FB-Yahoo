@@ -6,8 +6,7 @@ import com.example.fbyahoo.enums.OAuthFailureReason;
 import com.example.fbyahoo.exception.OAuthFlowException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -25,12 +24,12 @@ public class YahooOAuthService {
     private static final Logger log = LoggerFactory.getLogger(YahooOAuthService.class);
 
 
-    public YahooOAuthService(YahooProperties yahooProperties, WebClient.Builder builder) {
+    public YahooOAuthService(
+            YahooProperties yahooProperties,
+            @Qualifier("yahooOauthClient") WebClient oauthClient
+    ) {
         this.yahooProperties = yahooProperties;
-        this.oauthClient = builder
-                .baseUrl(yahooProperties.getOauth().getBaseUrl())
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                .build();
+        this.oauthClient = oauthClient;
     }
 
 

@@ -19,7 +19,7 @@ public class Team {
     private String teamId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "league_key", nullable = false)
+    @JoinColumn(name = "league_key", nullable = false, referencedColumnName = "league_key")
     private League league;
 
     @Column(name = "name")

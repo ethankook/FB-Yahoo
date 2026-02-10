@@ -7,7 +7,6 @@ import java.util.List;
 
 public interface TeamRepository extends JpaRepository<Team, String> {
 
-    List<Team> findByLeagueKey(String leagueKey);
+    List<Team> findByLeague_LeagueKey(String leagueKey);
 
-    boolean existsByLeagueKeyAndTeamId(String leagueKey, String teamId);
 }

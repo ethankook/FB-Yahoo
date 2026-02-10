@@ -15,7 +15,7 @@ public interface LeagueRosteredPlayerRepository extends JpaRepository<LeagueRost
 
     boolean existsByIdLeagueKeyAndIdPlayerId(String leagueKey, String playerId);
 
-    List<LeagueRosteredPlayer> findByTeamKey(String teamKey);
+    List<LeagueRosteredPlayer> findByTeam_TeamKey(String teamKey);
 
     @Modifying
     @Query("DELETE FROM LeagueRosteredPlayer lrp WHERE lrp.id.leagueKey = :leagueKey")
