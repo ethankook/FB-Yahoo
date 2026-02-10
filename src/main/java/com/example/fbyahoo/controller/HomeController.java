@@ -6,16 +6,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HomeController {
 
-
     @GetMapping("/success")
     public String success() {
         return "Success Page";
     }
-
-    @GetMapping("/")
-    public String home() {
-        return "Home Page";
-    }
-
-
 }

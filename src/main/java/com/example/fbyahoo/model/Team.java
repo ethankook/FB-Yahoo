@@ -3,6 +3,7 @@ package com.example.fbyahoo.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -91,6 +92,31 @@ public class Team {
 
     @Column(name = "manager_felo_tier")
     private String managerFeloTier;
+
+    // Standings
+    @Column(name = "standing_rank")
+    private Integer standingRank;
+
+    @Column(name = "standing_wins")
+    private Integer standingWins;
+
+    @Column(name = "standing_losses")
+    private Integer standingLosses;
+
+    @Column(name = "standing_ties")
+    private Integer standingTies;
+
+    @Column(name = "standing_pct")
+    private BigDecimal standingPct;
+
+    @Column(name = "standing_games_back")
+    private BigDecimal standingGamesBack;
+
+    @Column(name = "standing_points_for")
+    private BigDecimal standingPointsFor;
+
+    @Column(name = "standing_points_against")
+    private BigDecimal standingPointsAgainst;
 
     @Column(name = "ingested_at", nullable = false)
     private Instant ingestedAt;

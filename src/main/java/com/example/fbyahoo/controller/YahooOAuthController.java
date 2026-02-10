@@ -5,6 +5,7 @@ import com.example.fbyahoo.enums.OAuthFailureReason;
 import com.example.fbyahoo.exception.OAuthFlowException;
 import com.example.fbyahoo.service.TokenService;
 import com.example.fbyahoo.service.YahooOAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -32,17 +33,29 @@ public class YahooOAuthController {
     }
 
     @GetMapping("/login")
-    public void redirectToYahoo(HttpServletResponse response, HttpSession session) throws IOException {
-
+    public void redirectToYahoo(
+            HttpServletResponse response,
+            HttpSession session,
+            @RequestParam(value = "returnTo", required = false) String returnTo
+    ) throws IOException {
         log.debug("Redirecting to Yahoo login page");
         String state = UUID.randomUUID().toString();
         session.setAttribute("state", state);
-        response.sendRedirect(yahooOAuthService.buildAuthorizeUrl(state));
 
+        if (returnTo != null && returnTo.startsWith("https://localhost")) {
+            session.setAttribute("returnTo", returnTo);
+        }
+
+        response.sendRedirect(yahooOAuthService.buildAuthorizeUrl(state));
     }
 
     @GetMapping("/callback")
-    public String handleYahooCallback(@RequestParam("code") String code, @RequestParam("state") String state, HttpSession session) {
+    public String handleYahooCallback(
+            @RequestParam("code") String code,
+            @RequestParam("state") String state,
+            HttpSession session,
+            HttpServletRequest request
+    ) {
         Object expected = session.getAttribute("state");
         if (!(expected instanceof String expectedState) || !expectedState.equals(state)) {
             throw new OAuthFlowException(OAuthFailureReason.STATE_MISMATCH, "State mismatch");
@@ -52,10 +65,18 @@ public class YahooOAuthController {
         YahooTokenResponse token = yahooOAuthService.exchangeCodeForToken(code);
         tokenService.saveToken(token);
 
-        return "redirect:/";
+        String returnTo = (String) session.getAttribute("returnTo");
+        session.removeAttribute("returnTo");
+
+        if (returnTo != null && returnTo.startsWith("https://localhost")) {
+            log.info("Redirecting to stored returnTo: {}", returnTo);
+            return "redirect:" + returnTo;
+        }
+
+        // Default redirect: if running on 8443 (production), redirect to /leagues on same port
+        // If running dev mode, the returnTo should have been set
+        String defaultRedirect = "/leagues";
+        log.info("Redirecting to default: {}", defaultRedirect);
+        return "redirect:" + defaultRedirect;
     }
-
-
-
-
 }
