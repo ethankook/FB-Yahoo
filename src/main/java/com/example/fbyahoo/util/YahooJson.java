@@ -2,6 +2,7 @@ package com.example.fbyahoo.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public final class YahooJson {
@@ -36,6 +37,11 @@ public final class YahooJson {
         if ("1".equals(s) || "true".equalsIgnoreCase(s)) return true;
         if ("0".equals(s) || "false".equalsIgnoreCase(s)) return false;
         return null;
+    }
+
+    public static BigDecimal bigDecimalOrNull(String s) {
+        if (s == null || s.isBlank() || s.equals("-")) return null;
+        try { return new BigDecimal(s); } catch (NumberFormatException e) { return null; }
     }
 
     public static LocalDate dateOrNull(String s) {

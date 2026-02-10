@@ -12,16 +12,12 @@ import java.time.Instant;
 @NoArgsConstructor @AllArgsConstructor @Builder
 public class PlayerStats {
 
-    @EmbeddedId
-    private PlayerStatsId id;
+    @Id
+    @Column(name = "player_id", nullable = false)
+    private String id;
 
-    @MapsId("playerId")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "player_id", nullable = false)
-    private Player player;
-
-    @Column(name = "week")
-    private Integer week; // only when window_type = "week"
+    @Column(name = "season", nullable = false)
+    private Integer season;
 
     @Column(name = "games_played", nullable = false)
     private Integer gamesPlayed;
