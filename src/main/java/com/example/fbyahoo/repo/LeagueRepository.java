@@ -9,5 +9,7 @@ public interface LeagueRepository extends JpaRepository<League, String> {
 
     List<League> findByGameCodeAndSeason(String gameCode, Integer season);
 
+    League findByLeagueKey(String leagueKey);
+
     List<League> findBySeason(Integer season);
 }

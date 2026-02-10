@@ -1,5 +1,7 @@
 package com.example.fbyahoo.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +11,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 public class HttpClientConfig {
+
+    @Bean
+    public ObjectMapper objectMapper() {
+        return JsonMapper.builder()
+                .findAndAddModules()
+                .build();
+    }
 
     @Bean
     public WebClient.Builder webClientBuilder() {

@@ -13,6 +13,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
+
 import java.util.Base64;
 
 @Service
@@ -36,7 +37,7 @@ public class YahooOAuthService {
     public String buildAuthorizeUrl(String state) {
 
         String authorizeUrl = yahooProperties.getOauth().getBaseUrl() +
-                            yahooProperties.getOauth().getAuthorizeUrl();
+                yahooProperties.getOauth().getAuthorizeUrl();
 
         return UriComponentsBuilder
                 .fromUriString(authorizeUrl)
@@ -50,7 +51,7 @@ public class YahooOAuthService {
     }
 
 
-    public YahooTokenResponse exchangeCodeForToken(String code){
+    public YahooTokenResponse exchangeCodeForToken(String code) {
         log.debug("Exchanging Yahoo authorization code for tokens");
 
         String basic = Base64.getEncoder().encodeToString((yahooProperties.getOauth().getClientId() + ":" + yahooProperties.getOauth().getClientSecret()).getBytes());
@@ -83,7 +84,7 @@ public class YahooOAuthService {
 
     }
 
-    public YahooTokenResponse refreshToken(String refreshToken){
+    public YahooTokenResponse refreshToken(String refreshToken) {
         String basic = Base64.getEncoder().encodeToString((yahooProperties.getOauth().getClientId() + ":" + yahooProperties.getOauth().getClientSecret()).getBytes());
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
