@@ -16,6 +16,10 @@ public class PlayerStats {
     @Column(name = "player_id", nullable = false)
     private String id;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "player_id", insertable = false, updatable = false)
+    private Player player;
+
     @Column(name = "season", nullable = false)
     private Integer season;
 

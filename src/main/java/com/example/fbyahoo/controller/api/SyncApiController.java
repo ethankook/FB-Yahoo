@@ -1,13 +1,20 @@
-package com.example.fbyahoo.controller;
+package com.example.fbyahoo.controller.api;
 
 import com.example.fbyahoo.service.ingestion.*;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
-@RequestMapping("/sync")
-public class SyncController {
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/sync")
+public class SyncApiController {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncApiController.class);
 
     private final LeagueIngestionService leagueIngestionService;
     private final TeamIngestionService teamIngestionService;
@@ -18,7 +25,7 @@ public class SyncController {
     private final StandingsIngestionService standingsIngestionService;
     private final MatchupIngestionService matchupIngestionService;
 
-    public SyncController(
+    public SyncApiController(
             LeagueIngestionService leagueIngestionService,
             TeamIngestionService teamIngestionService,
             PlayerIngestionService playerIngestionService,
@@ -38,8 +45,9 @@ public class SyncController {
         this.matchupIngestionService = matchupIngestionService;
     }
 
-    @GetMapping("/all")
-    public String syncAll() {
+    @PostMapping
+    public ResponseEntity<Map<String, String>> sync() {
+        log.info("API sync started");
         leagueIngestionService.ingestAllLeagues();
         teamIngestionService.ingestAllTeams();
         playerIngestionService.usurpAllPlayers();
@@ -48,6 +56,7 @@ public class SyncController {
         playerStatsIngestionService.ingestSeasonAveragesForAllPlayers();
         standingsIngestionService.ingestAllStandings();
         matchupIngestionService.ingestAllMatchups();
-        return "redirect:/success";
+        log.info("API sync completed");
+        return ResponseEntity.ok(Map.of("status", "ok"));
     }
 }
