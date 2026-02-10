@@ -14,8 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
-
 import java.time.Instant;
+
+import static com.example.fbyahoo.util.YahooJson.*;
+
 
 @Service
 public class LeagueIngestionService {
@@ -78,47 +80,6 @@ public class LeagueIngestionService {
 
     }
 
-    @Transactional
-    public void ingestLeague(String leagueKey) {
-        String json = fetchLeagueJson(leagueKey);
-
-        try {
-            JsonNode root = objectMapper.readTree(json);
-            JsonNode leagueNode = root.path("fantasy_content")
-                    .path("league").path(0);
-
-            if (leagueNode.isMissingNode() || leagueNode.isNull()) {
-                throw new IllegalStateException("Could not find league node in response");
-            }
-
-            League league = parseLeague(leagueNode);
-            leagueRepository.save(league);
-            log.info("League {} ingested successfully", leagueKey);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to ingest league " + leagueKey, e);
-        }
-    }
-
-
-    private String fetchLeagueJson(String leagueKey) {
-        String accessToken = tokenService.getValidAccessToken();
-
-        return fantasyClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/fantasy/v2/league/{leagueKey}")
-                        .queryParam("format", "json")
-                        .build(leagueKey)
-                )
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .onStatus(s -> s.is4xxClientError() || s.is5xxServerError(),
-                        resp -> resp.bodyToMono(String.class)
-                                .map(body -> new RuntimeException("Yahoo API error: " + resp.statusCode() + " body=" + body)))
-                .bodyToMono(String.class)
-                .timeout(java.time.Duration.ofSeconds(10))
-                .block();
-    }
 
     private String fetchAllLeaguesJson() {
         String accessToken = tokenService.getValidAccessToken();
@@ -140,7 +101,7 @@ public class LeagueIngestionService {
 
     }
 
-    private League parseLeague(JsonNode leagueNode) {
+    public League parseLeague(JsonNode leagueNode) {
         String leagueKey = text(leagueNode, "league_key");
         if (leagueKey == null || leagueKey.isBlank()) {
             throw new IllegalStateException("League missing league_key");
@@ -187,9 +148,9 @@ public class LeagueIngestionService {
         league.setStartWeek(intOrNull(leagueNode, "start_week"));
         league.setEndWeek(intOrNull(leagueNode, "end_week"));
 
-        league.setCurrentDate(parseDateOrNull(text(leagueNode, "current_date")));
-        league.setStartDate(parseDateOrNull(text(leagueNode, "start_date")));
-        league.setEndDate(parseDateOrNull(text(leagueNode, "end_date")));
+        league.setCurrentDate(dateFieldOrNull(leagueNode, "current_date"));
+        league.setStartDate(dateFieldOrNull(leagueNode, "start_date"));
+        league.setEndDate(dateFieldOrNull(leagueNode, "end_date"));
 
         if (league.getIngestedAt() == null) {
             league.setIngestedAt(Instant.now());
@@ -203,38 +164,5 @@ public class LeagueIngestionService {
 
     }
 
-    private static String text(JsonNode node, String field) {
-        JsonNode v = node.get(field);
-        return (v == null || v.isNull()) ? null : v.asText();
-    }
-
-    private static Integer intOrNull(JsonNode node, String field) {
-        String s = text(node, field);
-        if (s == null || s.isBlank() || s.equals("-")) return null;
-        try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
-    }
-
-    private static Long longOrNull(JsonNode node, String field) {
-        String s = text(node, field);
-        if (s == null || s.isBlank() || s.equals("-")) return null;
-        try { return Long.parseLong(s); } catch (NumberFormatException e) { return null; }
-    }
-
-    private static Boolean boolOrNull(JsonNode node, String field) {
-        JsonNode v = node.get(field);
-        if (v == null || v.isNull()) return null;
-
-        // Yahoo sometimes sends boolean true/false, sometimes "0"/"1"
-        if (v.isBoolean()) return v.asBoolean();
-        String s = v.asText();
-        if ("1".equals(s) || "true".equalsIgnoreCase(s)) return true;
-        if ("0".equals(s) || "false".equalsIgnoreCase(s)) return false;
-        return null;
-    }
-
-    private static java.time.LocalDate parseDateOrNull(String s) {
-        if (s == null || s.isBlank() || s.equals("-")) return null;
-        return java.time.LocalDate.parse(s);
-    }
 
 }

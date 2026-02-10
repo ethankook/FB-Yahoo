@@ -25,10 +25,4 @@ public class LeagueIngestionController {
 
     }
 
-    @GetMapping("/{leagueKey}")
-    public String ingestLeague(@PathVariable String leagueKey) throws IOException {
-        leagueIngestionService.ingestLeague(leagueKey);
-        return "redirect:/success";
-
-    }
 }
