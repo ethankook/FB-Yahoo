@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface LeagueRosteredPlayerRepository extends JpaRepository<LeagueRosteredPlayer, LeagueRosteredPlayerId> {
@@ -20,4 +21,6 @@ public interface LeagueRosteredPlayerRepository extends JpaRepository<LeagueRost
     @Modifying
     @Query("DELETE FROM LeagueRosteredPlayer lrp WHERE lrp.id.leagueKey = :leagueKey")
     int deleteByLeagueKey(@Param("leagueKey") String leagueKey);
+
+    long deleteByLeague_LeagueKeyAndAsOfBefore(String leagueKey, Instant cutoff);
 }

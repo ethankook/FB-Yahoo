@@ -48,6 +48,14 @@ public class TeamIngestionService {
     }
 
     @Transactional
+    public void ingestAllTeams() {
+        for (League league : leagueRepository.findAll()) {
+            usurpLeague(league.getLeagueKey());
+        }
+    }
+
+
+    @Transactional
     public void usurpLeague(String leagueKey) {
         String json = fetchLeagueJson(leagueKey);
 

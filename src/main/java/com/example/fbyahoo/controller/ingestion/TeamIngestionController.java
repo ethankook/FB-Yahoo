@@ -20,8 +20,15 @@ public class TeamIngestionController {
     }
 
     @GetMapping("/{leagueKey}")
-    public String ingestAllLeagues(@PathVariable String leagueKey) throws IOException {
+    public String ingestLeague(@PathVariable String leagueKey) throws IOException {
         teamIngestionService.usurpLeague(leagueKey);
+        return "redirect:/success";
+
+    }
+
+    @GetMapping("/all")
+    public String ingestAllLeaguesTeams() throws IOException {
+        teamIngestionService.ingestAllTeams();
         return "redirect:/success";
 
     }
