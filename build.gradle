@@ -50,7 +50,3 @@ dependencies {
     runtimeOnly "io.netty:netty-resolver-dns-native-macos:4.1.109.Final:osx-aarch_64"
 
 }
-
-tasks.named('test') {
-    useJUnitPlatform()
-}

@@ -65,11 +65,10 @@ public class TokenService {
 
     @Transactional
     public void saveToken(YahooTokenResponse tokenResponse) {
-        OAuthToken token = getToken().orElseGet(() -> {
-            log.debug("No token found in database. Creating new token");
-            return new OAuthToken();
-        });
+        tokenRepository.deleteAll();
+        log.debug("Cleared existing tokens to maintain single-row invariant");
 
+        OAuthToken token = new OAuthToken();
         token.setAccessToken(tokenResponse.accessToken());
 
         if (tokenResponse.refreshToken() != null && !tokenResponse.refreshToken().isBlank()) {
@@ -77,18 +76,14 @@ public class TokenService {
             log.debug("Received refresh token in response — storing refresh token");
         }
         else {
-            log.debug("No refresh token provided in response — keeping existing refresh token");
-
+            log.warn("No refresh token provided in response — token refresh will fail");
         }
         token.setExpiresAt(computeExpiresAt(tokenResponse.expiresIn()));
         token.setTokenType(tokenResponse.tokenType());
         token.setScope(tokenResponse.scope());
 
         tokenRepository.save(token);
-        log.debug("OAuth token stored/updated in DB (expiresAt={}, tokenType={})", token.getExpiresAt(), token.getTokenType());
-
-
-
+        log.debug("OAuth token stored in DB (expiresAt={}, tokenType={})", token.getExpiresAt(), token.getTokenType());
     }
 
 
