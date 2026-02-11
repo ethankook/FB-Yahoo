@@ -1,231 +1,240 @@
-# FB Helper (Yahoo Fantasy)
+# Fantasy Basketball Helper 🏀
 
-FB Helper is a **local-first Yahoo Fantasy Sports helper** built for learning, experimentation, and personal use. It is primarily for basketball now, but may expand later. 
+A local-first Yahoo Fantasy Basketball analytics tool built with Spring Boot and React.
 
-This project is designed to be:
-- Open-source
-- Runnable entirely on your own machine
-- Safe to publish publicly (no secrets committed)
-- Configured with **your own Yahoo account and your own local database**
+## Features
 
-Nothing is hosted. Nothing is collected. All data stays local.
+- 📊 **League Overview** - View all your Yahoo Fantasy leagues
+- 👥 **Team Dashboard** - Detailed stats for your team
+- 📈 **Standings** - Real-time league standings with W-L-T records
+- 🤝 **Matchup Analysis** - Week-by-week category matchup tracking
+- 🎯 **Player Recommendations** - Top available players by category (PTS, REB, AST, STL, BLK, etc.)
+- 💡 **Team Insights** - Identify your strongest and weakest categories
+- 🔄 **Data Sync** - One-click sync with Yahoo Fantasy API
 
----
+## Tech Stack
 
-## What this project uses
+**Backend:**
+- Java 21
+- Spring Boot 4
+- PostgreSQL 16
+- Flyway migrations
+- Yahoo OAuth 2.0
 
-- **Spring Boot (MVC)** for the backend server
-- **Yahoo OAuth 2.0** for authentication (your Yahoo account)
-- **PostgreSQL** (Docker) for local persistence
-- **Flyway** for database migrations (automatically applies database migrations on startup)
-- **Local HTTPS** (mkcert + PKCS12 keystore) because Yahoo requires HTTPS redirect URIs
+**Frontend:**
+- React 18
+- TypeScript
+- Vite
+- React Router
 
----
+## Quick Start with Docker 🐳
 
-## Prerequisites
-
-You will need:
-
-- **Java 21**
-- **Docker & Docker Compose**
-- **A Yahoo Developer account**
-- **mkcert** (for local HTTPS certificates)
-
-### Install mkcert (macOS)
+The easiest way to run the entire stack:
 
 ```bash
-brew install mkcert
-brew install nss
-mkcert -install
-```
+# 1. Copy environment template
+cp .env.example .env
 
-### Generate localhost certificates
+# 2. Edit .env with your Yahoo credentials
+# Get credentials from: https://developer.yahoo.com/apps/
 
-From the project root, run:
-
-```bash
-mkcert localhost 127.0.0.1 ::1
-```
-
-This will generate files similar to:
-- `localhost+2.pem`
-- `localhost+2-key.pem`
-
-These files are local-only and must not be committed.
-
-### Convert certificates to a PKCS12 keystore
-
-Spring Boot requires a `.p12` keystore.
-
-Create a directory for secrets:
-
-```bash
+# 3. Ensure SSL certificates are in place
 mkdir -p secrets
+cp src/main/resources/keystore.p12 secrets/
+
+# 4. Start everything
+./start.sh
+
+# Or manually:
+docker compose up --build
 ```
 
-Convert the certs:
+Open `https://localhost:8443` and login with Yahoo!
 
-```bash
-openssl pkcs12 -export \
-  -in localhost+2.pem \
-  -inkey localhost+2-key.pem \
-  -out secrets/keystore.p12 \
-  -name local-https \
-  -password pass:changeit
-```
+See [DOCKER.md](DOCKER.md) for detailed Docker documentation.
 
-You may choose a different password if you want. Make sure to update `.env` accordingly.
+## Development Setup
 
-Spring Boot is configured to read this keystore at startup to enable HTTPS (via `server.ssl.enabled=true` and related properties in `application.properties`).
+For active development with hot reload:
 
-### Update .gitignore
+### Prerequisites
 
-Ensure the following entries exist:
+- Java 21
+- Node.js 22+
+- Docker Desktop
+- mkcert (for local HTTPS)
 
-```
-.env
-secrets/
-*.pem
-*.p12
-```
-
----
-
-## Yahoo Developer App Setup
-
-Each user must create their own Yahoo OAuth app.
-
-### Create a Yahoo App
-
-1. Visit: https://developer.yahoo.com/apps/
-2. Click **Create an App**
-3. Use the following values:
-   - **Application Name**: Any name you like (e.g. `FB Helper Local`)
-   - **Homepage URL**: `https://localhost:8443`
-   - **Redirect URI(s)**: `https://localhost:8443/oauth/yahoo/callback` (must match exactly, including protocol and port)
-     - if you change this, match the changes in .env file and YahooOAuthController.java endpoint
-   - **OAuth Client Type**: Confidential Client
-   - **API Permissions / Scopes**: Enable Fantasy Sports (Read)
-4. Create the app and copy:
-   - **Client ID**
-   - **Client Secret**
-
----
-
-## Database Setup (PostgreSQL via Docker)
-
-The application uses PostgreSQL in Docker. Each user runs their own local database.
-
-### Required Database Variables
-
-You will configure these in `.env`:
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `POSTGRES_HOST`
-- `POSTGRES_PORT`
-
-These credentials are:
-- Local-only
-- Not shared
-- Safe to choose freely
-
-### Create the .env File
-
-Copy `.env.example` to `.env` and fill in all values.
-
-### Start the Database
-
-Start PostgreSQL using Docker:
+### 1. Database
 
 ```bash
 docker compose up -d db
 ```
 
-Verify it is running:
+### 2. Backend
 
 ```bash
-docker ps
-```
+# Create .env file with credentials
+cp .env.example .env
+# Edit .env with your Yahoo credentials
 
----
-
-## Run the Application
-
-### Option A: Run locally with Gradle
-
-```bash
+# Run Spring Boot
 ./gradlew bootRun
 ```
 
-The app will start at: `https://localhost:8443`
+Backend runs at `https://localhost:8443`
 
-### Option B: Run with Docker Compose
+### 3. Frontend
 
 ```bash
-docker compose up --build
+cd frontend
+npm install
+npm run dev
 ```
 
-**Note:** Do not run `bootRun` and the app container at the same time on the same port.
+Frontend runs at `https://localhost:5173` (proxies to backend)
 
-When running with Docker Compose, the HTTPS keystore must be mounted into the app container. This is already configured in `docker-compose.yml`.
+## Project Structure
 
----
+```
+.
+├── src/main/java/com/example/fbyahoo/
+│   ├── config/           # Spring Security, CORS, WebClient
+│   ├── controller/
+│   │   ├── api/          # REST API endpoints
+│   │   └── ingestion/    # Yahoo API ingestion triggers
+│   ├── service/
+│   │   ├── ingestion/    # Yahoo Fantasy API services
+│   │   └── TokenService.java  # OAuth token management
+│   ├── model/            # JPA entities
+│   ├── repo/             # Spring Data repositories
+│   └── dto/api/          # API response DTOs
+├── src/main/resources/
+│   ├── db/migration/     # Flyway SQL migrations
+│   └── application.properties
+├── frontend/
+│   ├── src/
+│   │   ├── api/          # API client
+│   │   ├── components/   # React components
+│   │   ├── context/      # Auth context
+│   │   ├── pages/        # Route pages
+│   │   └── types/        # TypeScript types
+│   └── vite.config.ts
+├── docker-compose.yml
+├── Dockerfile            # Multi-stage build (frontend + backend)
+└── DOCKER.md
+```
 
-## Yahoo OAuth Login Flow
+## API Endpoints
 
-1. Open: `https://localhost:8443/oauth/yahoo/login`
-2. Log in to Yahoo and approve access
-3. Yahoo redirects back to: `https://localhost:8443/oauth/yahoo/callback`
-4. The application exchanges the code for tokens and stores them in your local database
-5. After a successful login, you should be redirected to `/`
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/auth/status` | Check authentication |
+| GET | `/api/leagues` | List all leagues |
+| GET | `/api/leagues/{key}` | League detail + my team |
+| GET | `/api/leagues/{key}/roster` | My roster with stats |
+| GET | `/api/leagues/{key}/available` | Top available players |
+| GET | `/api/leagues/{key}/standings` | League standings |
+| GET | `/api/leagues/{key}/matchup` | Current matchup |
+| GET | `/api/leagues/{key}/insights` | Team insights |
+| POST | `/api/sync` | Sync all data from Yahoo |
 
----
+## Yahoo Developer Setup
+
+1. Go to https://developer.yahoo.com/apps/
+2. Create new app
+3. Set redirect URI: `https://localhost:8443/oauth/yahoo/callback`
+4. Copy Client ID and Client Secret to `.env`
+
+## Database Schema
+
+- `oauth_token` - Single-row Yahoo OAuth token storage
+- `league` - Yahoo Fantasy leagues (31 fields)
+- `team` - Teams in leagues (manager info flattened)
+- `player` - Global player registry (eligibility, injury, editorial data)
+- `player_stats` - Season averages per game (PTS, REB, AST, etc.)
+- `player_ownership` - Ownership % and weekly deltas
+- `league_rostered_player` - Snapshot of rostered players per league
+- `matchup` - Weekly matchup data
+- `matchup_stat` - Category-by-category matchup results
+
+Migrations in `src/main/resources/db/migration/`
+
+## Key Patterns
+
+### Token Management
+- Single-row `oauth_token` table
+- Auto-refresh with 30s expiry buffer
+- Clears tokens on refresh failure (forces re-login)
+
+### Ingestion Pattern
+- Controller (GET) → Service (@Transactional)
+- Fetch JSON via `yahooFantasyClient` with Bearer token
+- Parse with `YahooJson` utility (null-safe extractors)
+- Upsert via JPA `findById().orElseGet()` + `save()`
+
+### Yahoo JSON Quirks
+- Responses use arrays of singleton objects
+- Must walk by key name to extract fields
+- `YahooJson` utility provides `text()`, `intOrNull()`, `bigDecimalOrNull()`, etc.
+
+### Frontend Auth Flow
+- AuthContext checks `/api/auth/status` on mount
+- ProtectedRoute guards `/leagues` and `/leagues/:key`
+- 401 responses redirect to `/login`
+- OAuth callback redirects to `returnTo` or `/leagues`
+
+## Commands
+
+```bash
+# Backend
+./gradlew bootRun               # Run Spring Boot
+./gradlew compileJava           # Compile only
+./gradlew test                  # Run tests
+./gradlew bootJar               # Build JAR
+
+# Frontend
+cd frontend
+npm run dev                     # Dev server (hot reload)
+npm run build                   # Production build → src/main/resources/static/
+npm run preview                 # Preview production build
+
+# Docker
+docker compose up --build       # Build and start all services
+docker compose down -v          # Stop and remove volumes
+docker compose logs -f app      # View app logs
+
+# Database
+docker compose up -d db         # Start only database
+docker compose down -v          # Nuke database (clean slate)
+```
 
 ## Troubleshooting
 
-### HTTPS / TLS parsing errors (0x16 0x03)
+**OAuth redirect fails:**
+- Verify redirect URI in Yahoo Developer Console: `https://localhost:8443/oauth/yahoo/callback`
+- Check `.env` has correct `YAHOO_CLIENT_ID` and `YAHOO_CLIENT_SECRET`
 
-This means HTTPS traffic is hitting an HTTP server.
+**Sync button does nothing:**
+- Check browser console for errors
+- Ensure you're logged in (token exists in database)
+- Check backend logs for ingestion errors
 
-**Fix:**
-- Ensure SSL is enabled
-- Ensure keystore path and password are correct
-- Ensure you are using `https://localhost:8443`
+**Database connection fails:**
+- Ensure PostgreSQL is running: `docker compose up -d db`
+- Check connection params in `.env`
 
-### Port already in use
+**SSL certificate errors:**
+- Ensure `keystore.p12` exists in `secrets/` or `src/main/resources/`
+- For local dev, generate with `mkcert localhost`
 
-Change:
-- `SERVER_PORT`
-- Yahoo Redirect URI
-- `YAHOO_REDIRECT_URI`
+**Frontend build fails:**
+- Node.js 22+ required for Vite 7
+- Run `npm install` in `frontend/` directory
 
-All must match exactly.
+## License
 
-### Database connection errors
+Private project - Not licensed for redistribution
 
-Ensure:
-- Docker is running
-- The Postgres container is running
-- `.env` values match Docker Compose config
+## Credits
 
----
-
-## Security Notes
-
-- **Never commit** `.env`
-- **Never commit** keystores or certificates
-- **Yahoo Client Secret** must remain private
-- Redirect URI is not a secret, but must match exactly
-
----
-
-## Summary
-
-This project is designed to be:
-- Easy to clone
-- Safe to publish
-- Fully local
-- Educational
-
-Every user runs it on their own machine with their own credentials.
+Built with Claude Code by Anthropic

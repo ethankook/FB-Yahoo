@@ -46,7 +46,10 @@ public class MatchupIngestionService {
     @Transactional
     public void ingestAllMatchups() {
         for (League league : leagueRepository.findAll()) {
-            Integer week = league.getCurrentWeek();
+            Integer week = league.getMatchupWeek();
+            if (week == null) {
+                week = league.getCurrentWeek();
+            }
             if (week == null) week = 1;
             ingestMatchups(league.getLeagueKey(), week);
         }
@@ -59,10 +62,15 @@ public class MatchupIngestionService {
         try {
             JsonNode root = objectMapper.readTree(json);
 
-            JsonNode scoreboardNode = root.path("fantasy_content")
+            JsonNode scoreboard = root.path("fantasy_content")
                     .path("league").path(1)
-                    .path("scoreboard").path(0)
-                    .path("matchups");
+                    .path("scoreboard");
+
+            JsonNode scoreboardNode = scoreboard.path("0").path("matchups");
+            if (scoreboardNode.isMissingNode() || scoreboardNode.isNull()) {
+                // Fallback in case Yahoo returns an array-shaped scoreboard
+                scoreboardNode = scoreboard.path(0).path("matchups");
+            }
 
             if (scoreboardNode.isMissingNode() || scoreboardNode.isNull()) {
                 log.warn("No scoreboard data found for league {} week {}", leagueKey, week);

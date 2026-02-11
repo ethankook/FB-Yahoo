@@ -9,5 +9,6 @@ public record AvailablePlayerDto(
         String headshotUrl,
         String status,
         PlayerStatsDto stats,
-        Integer percentOwned
+        Integer percentOwned,
+        Integer deltaWeek
 ) {}

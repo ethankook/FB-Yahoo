@@ -104,6 +104,34 @@ public class LeagueApiController {
             @RequestParam(defaultValue = "10") int limit
     ) {
         PageRequest page = PageRequest.of(0, limit);
+        Integer season = leagueRepository.findById(leagueKey)
+                .map(League::getSeason)
+                .orElse(2025);
+
+        if ("delta".equals(category)) {
+            return playerOwnershipRepository.findAvailableOrderedByDeltaWeekDesc(leagueKey, season, page).stream()
+                    .map(ownership -> {
+                        String playerId = ownership.getId().getPlayerId();
+                        Player player = ownership.getPlayer();
+                        if (player == null) {
+                            player = playerRepository.findById(playerId).orElse(null);
+                        }
+                        PlayerStats stats = playerStatsRepository.findById(playerId).orElse(null);
+                        return new AvailablePlayerDto(
+                                playerId,
+                                player != null ? player.getNameFull() : null,
+                                player != null ? player.getDisplayPosition() : null,
+                                player != null ? player.getEligiblePositions() : null,
+                                player != null ? player.getEditorialTeamAbbr() : null,
+                                player != null ? player.getHeadshotUrl() : null,
+                                player != null ? player.getStatus() : null,
+                                stats != null ? toStatsDto(stats) : null,
+                                ownership.getPercentOwned(),
+                                ownership.getDeltaWeek()
+                        );
+                    })
+                    .toList();
+        }
 
         List<PlayerStats> statsList = switch (category) {
             case "pts" -> playerStatsRepository.topAvailableByPtsPg(leagueKey, page);
@@ -124,10 +152,10 @@ public class LeagueApiController {
                     if (player == null) {
                         player = playerRepository.findById(ps.getId()).orElse(null);
                     }
-                    Integer percentOwned = playerOwnershipRepository
-                            .findByIdPlayerIdAndIdSeason(ps.getId(), 2025)
-                            .map(PlayerOwnership::getPercentOwned)
-                            .orElse(null);
+                    Optional<PlayerOwnership> ownership = playerOwnershipRepository
+                            .findByIdPlayerIdAndIdSeason(ps.getId(), season);
+                    Integer percentOwned = ownership.map(PlayerOwnership::getPercentOwned).orElse(null);
+                    Integer deltaWeek = ownership.map(PlayerOwnership::getDeltaWeek).orElse(null);
                     return new AvailablePlayerDto(
                             ps.getId(),
                             player != null ? player.getNameFull() : null,
@@ -137,7 +165,8 @@ public class LeagueApiController {
                             player != null ? player.getHeadshotUrl() : null,
                             player != null ? player.getStatus() : null,
                             toStatsDto(ps),
-                            percentOwned
+                            percentOwned,
+                            deltaWeek
                     );
                 })
                 .toList();
@@ -187,7 +216,11 @@ public class LeagueApiController {
             return ResponseEntity.notFound().build();
         }
 
-        int targetWeek = week != null ? week : (league.getCurrentWeek() != null ? league.getCurrentWeek() : 1);
+        int targetWeek = week != null
+                ? week
+                : (league.getMatchupWeek() != null
+                    ? league.getMatchupWeek()
+                    : (league.getCurrentWeek() != null ? league.getCurrentWeek() : 1));
 
         Optional<Team> myTeamOpt = teamRepository.findByLeague_LeagueKey(leagueKey).stream()
                 .filter(t -> Boolean.TRUE.equals(t.getIsOwnedByCurrentLogin()))
