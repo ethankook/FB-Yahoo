@@ -46,7 +46,10 @@ public class MatchupIngestionService {
     @Transactional
     public void ingestAllMatchups() {
         for (League league : leagueRepository.findAll()) {
-            Integer week = league.getCurrentWeek();
+            Integer week = league.getMatchupWeek();
+            if (week == null) {
+                week = league.getCurrentWeek();
+            }
             if (week == null) week = 1;
             ingestMatchups(league.getLeagueKey(), week);
         }

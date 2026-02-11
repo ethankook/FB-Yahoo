@@ -187,7 +187,11 @@ public class LeagueApiController {
             return ResponseEntity.notFound().build();
         }
 
-        int targetWeek = week != null ? week : (league.getCurrentWeek() != null ? league.getCurrentWeek() : 1);
+        int targetWeek = week != null
+                ? week
+                : (league.getMatchupWeek() != null
+                    ? league.getMatchupWeek()
+                    : (league.getCurrentWeek() != null ? league.getCurrentWeek() : 1));
 
         Optional<Team> myTeamOpt = teamRepository.findByLeague_LeagueKey(leagueKey).stream()
                 .filter(t -> Boolean.TRUE.equals(t.getIsOwnedByCurrentLogin()))

@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Build outputs
+build/
+target/
+*.jar
+*.war
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+src/main/resources/static/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Secrets (will be mounted as volume)
+.env
+secrets/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Docs
+README.md
+docs/
+
+# Plans
+plans/
+.claude/
