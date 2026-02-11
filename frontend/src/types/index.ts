@@ -64,6 +64,7 @@ export interface AvailablePlayer {
   status: string | null;
   stats: PlayerStatsDto | null;
   percentOwned: number | null;
+  deltaWeek: number | null;
 }
 
 export interface Standing {

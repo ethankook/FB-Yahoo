@@ -16,6 +16,7 @@ const CATEGORIES = [
   { key: 'fg_pct', label: 'FG%' },
   { key: 'ft_pct', label: 'FT%' },
   { key: 'fg3', label: '3PM' },
+  { key: 'delta', label: 'DELTA' },
 ];
 
 const STAT_GETTER: Record<string, (p: AvailablePlayer) => number | null> = {
@@ -28,6 +29,7 @@ const STAT_GETTER: Record<string, (p: AvailablePlayer) => number | null> = {
   fg_pct: p => p.stats?.fgPct ?? null,
   ft_pct: p => p.stats?.ftPct ?? null,
   fg3: p => p.stats?.fg3MadePg ?? null,
+  delta: p => p.deltaWeek ?? null,
 };
 
 export default function RecommendationsPanel({ leagueKey }: Props) {
@@ -84,7 +86,15 @@ export default function RecommendationsPanel({ leagueKey }: Props) {
                     <td>{p.name}</td>
                     <td>{p.displayPosition}</td>
                     <td>{p.editorialTeamAbbr}</td>
-                    <td>{val != null ? (category.includes('pct') ? (val * 100).toFixed(1) + '%' : val.toFixed(1)) : '-'}</td>
+                    <td>
+                      {val != null
+                        ? (category.includes('pct')
+                            ? (val * 100).toFixed(1) + '%'
+                            : (category === 'delta'
+                                ? (val > 0 ? `+${val}` : `${val}`)
+                                : val.toFixed(1)))
+                        : '-'}
+                    </td>
                     <td>{p.percentOwned != null ? p.percentOwned + '%' : '-'}</td>
                   </tr>
                 );
