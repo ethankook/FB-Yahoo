@@ -421,9 +421,10 @@ The application uses **Redis 7** for caching expensive API read operations. Redi
 
 **Cache Configuration:**
 - **TTL**: 30 minutes (configurable in `CacheConfig.java`)
-- **Serialization**: JSON (via `RedisSerializer.json()`)
+- **Serialization**: JSON (via `GenericJackson2JsonRedisSerializer` wrapped by a custom `LenientJsonRedisSerializer`)
 - **Key Prefix**: `fbyahoo::` (for namespace isolation)
 - **Eviction**: All caches cleared on `/api/sync` POST
+- **Startup Safety**: All caches are cleared once on app startup to prevent stale/incompatible cache payloads after deploys
 
 **How it works:**
 1. **First request** → Database query → Store in Redis → Return result
@@ -587,7 +588,7 @@ docker exec -it fbyahoo_redis redis-cli MONITOR
 
 ✅ **Solution:**
 - Token should auto-refresh. Check backend logs for refresh errors
-- If broken, clear token: `docker exec -it fb_helper_db psql -U postgres -d fbyahoo -c "DELETE FROM oauth_token;"`
+- If broken, clear token: `docker exec -it fbyahoo psql -U postgres -d fbyahoo -c "DELETE FROM oauth_token;"`
 - Then re-login through the app
 
 ### Data Sync Issues
@@ -718,8 +719,6 @@ docker builder prune -a
 
 ## 📖 Additional Documentation
 
-- **[DOCKER.md](DOCKER.md)** - Detailed Docker deployment guide
-- **[CLAUDE.md](CLAUDE.md)** - Development patterns and architecture notes
 - **[docs/research/](docs/research/)** - Yahoo API response structure documentation
 
 ---
@@ -739,7 +738,7 @@ docker builder prune -a
 This is a private project. If you're collaborating:
 
 1. Create a feature branch: `git checkout -b feature/my-feature`
-2. Follow existing code patterns (see CLAUDE.md)
+2. Follow existing code patterns in `src/main/java` and existing tests in `src/test/java`
 3. Test your changes: `./gradlew test`
 4. Commit: `git commit -m "feat: add feature"`
 5. Push: `git push origin feature/my-feature`
@@ -757,11 +756,11 @@ Private project - Not licensed for redistribution
 If you encounter issues not covered in the troubleshooting section:
 
 1. Check logs: `docker compose logs -f app`
-2. Review database state: Connect via `docker exec -it fb_helper_db psql -U postgres -d fbyahoo`
+2. Review database state: Connect via `docker exec -it fbyahoo psql -U postgres -d fbyahoo`
 3. Verify Yahoo API status: [Yahoo Developer Network Status](https://developer.yahoo.com/)
 
 ---
 
 ## ✨ Credits
 
-Built with Claude Code by Anthropic
+Built with OpenAI Codex
