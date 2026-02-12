@@ -18,6 +18,7 @@ A local-first Yahoo Fantasy Basketball analytics tool built with Spring Boot and
 - Java 21
 - Spring Boot 4
 - PostgreSQL 16
+- Redis 7 (caching layer)
 - Flyway migrations
 - Yahoo OAuth 2.0
 
@@ -96,6 +97,11 @@ POSTGRES_PORT=5432
 POSTGRES_DB=fbyahoo
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
+
+# Redis Cache (optional password)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
 
 # Yahoo OAuth - REPLACE THESE WITH YOUR CREDENTIALS
 YAHOO_CLIENT_ID=your_yahoo_client_id_here
@@ -236,13 +242,13 @@ docker compose down -v
 
 For active development with auto-reload on code changes.
 
-### 1. Start the Database
+### 1. Start Dependencies (Database + Redis)
 
 ```bash
-docker compose up -d db
+docker compose up -d db redis
 ```
 
-This starts only PostgreSQL in the background.
+This starts PostgreSQL and Redis in the background.
 
 ### 2. Build and Run the Backend
 
@@ -303,7 +309,20 @@ The frontend runs at **https://localhost:5173**
 
 # Run a specific test method
 ./gradlew test --tests "com.example.fbyahoo.SomeTest.methodName"
+
+# Run cache-specific tests
+./gradlew test --tests "com.example.fbyahoo.service.LeagueReadServiceCacheTest"
+./gradlew test --tests "com.example.fbyahoo.controller.api.SyncEvictsCachesTest"
+
+# Run tests with coverage report
+./gradlew test jacocoTestReport
+# Open: build/reports/jacoco/test/html/index.html
 ```
+
+**Test Infrastructure:**
+- **Redis in tests**: Uses in-memory `ConcurrentMapCacheManager` (no Redis container needed)
+- **Cache tests**: Verify `@Cacheable` and `@CacheEvict` behavior
+- **Configuration**: `TestCacheConfig.java` provides test-only cache manager
 
 ---
 
@@ -387,6 +406,43 @@ The database uses Flyway migrations for version control (located in `src/main/re
 - **Game key 466**: NBA 2024-25 season
 - **Flyway-only migrations**: Hibernate is set to `ddl-auto=validate` (never creates/alters tables)
 
+### Redis Caching Layer
+
+The application uses **Redis 7** for caching expensive API read operations. Redis improves response times by storing frequently accessed data in memory.
+
+**Cached Endpoints:**
+- `/api/leagues` (league list) → Cache key: static
+- `/api/leagues/{key}` (league detail) → Cache key: `leagueKey`
+- `/api/leagues/{key}/roster` → Cache key: `leagueKey`
+- `/api/leagues/{key}/available` → Cache key: `leagueKey:category:limit`
+- `/api/leagues/{key}/standings` → Cache key: `leagueKey`
+- `/api/leagues/{key}/matchup` → Cache key: `leagueKey:weekNumber`
+- `/api/leagues/{key}/insights` → Cache key: `leagueKey`
+
+**Cache Configuration:**
+- **TTL**: 30 minutes (configurable in `CacheConfig.java`)
+- **Serialization**: JSON (via `RedisSerializer.json()`)
+- **Key Prefix**: `fbyahoo::` (for namespace isolation)
+- **Eviction**: All caches cleared on `/api/sync` POST
+
+**How it works:**
+1. **First request** → Database query → Store in Redis → Return result
+2. **Subsequent requests** (within 30 min) → Return from Redis (no DB query)
+3. **After sync** → All caches evicted → Fresh data on next request
+
+**Configuration** (`application.properties`):
+```properties
+spring.data.redis.host=${REDIS_HOST:localhost}
+spring.data.redis.port=${REDIS_PORT:6379}
+spring.data.redis.password=${REDIS_PASSWORD:}
+```
+
+**Implementation:**
+- `@Cacheable` annotations on read methods in `LeagueReadService`
+- `@CacheEvict(allEntries=true)` on `SyncApiController.sync()`
+- Cache names defined in `CacheNames.java` constants
+- Tests use in-memory `ConcurrentMapCacheManager` (see `TestCacheConfig.java`)
+
 ---
 
 ## 🛠️ Useful Commands
@@ -394,7 +450,7 @@ The database uses Flyway migrations for version control (located in `src/main/re
 ### Docker Commands
 
 ```bash
-# Start all services (database + app)
+# Start all services (database + redis + app)
 docker compose up --build
 
 # Start in background (detached mode)
@@ -411,6 +467,9 @@ docker compose logs -f app
 
 # View logs for the database
 docker compose logs -f db
+
+# View logs for Redis
+docker compose logs -f redis
 
 # Restart just the app service
 docker compose restart app
@@ -473,17 +532,42 @@ npm run lint
 docker compose up -d db
 
 # Connect to PostgreSQL shell
-docker exec -it fb_helper_db psql -U postgres -d fbyahoo
+docker exec -it fbyahoo psql -U postgres -d fbyahoo
 
 # Reset database (warning: deletes all data)
 docker compose down -v
 docker compose up -d db
 
 # Export database
-docker exec -t fb_helper_db pg_dump -U postgres fbyahoo > backup.sql
+docker exec -t fbyahoo pg_dump -U postgres fbyahoo > backup.sql
 
 # Import database
-docker exec -i fb_helper_db psql -U postgres fbyahoo < backup.sql
+docker exec -i fbyahoo psql -U postgres fbyahoo < backup.sql
+```
+
+### Redis Commands
+
+```bash
+# Start only Redis
+docker compose up -d redis
+
+# Connect to Redis CLI
+docker exec -it fbyahoo_redis redis-cli
+
+# View all cache keys
+docker exec -it fbyahoo_redis redis-cli KEYS "fbyahoo::*"
+
+# Clear all caches (flush entire Redis)
+docker exec -it fbyahoo_redis redis-cli FLUSHALL
+
+# Clear specific cache namespace
+docker exec -it fbyahoo_redis redis-cli --scan --pattern "fbyahoo::*" | xargs docker exec -i fbyahoo_redis redis-cli DEL
+
+# Check Redis memory usage
+docker exec -it fbyahoo_redis redis-cli INFO memory
+
+# Monitor live Redis commands (real-time)
+docker exec -it fbyahoo_redis redis-cli MONITOR
 ```
 
 ---
@@ -520,8 +604,9 @@ docker exec -i fb_helper_db psql -U postgres fbyahoo < backup.sql
 
 ✅ **Solution:**
 - Click "Sync Data" to manually refresh from Yahoo
-- Data is cached in the database until you sync again
+- Data is cached in Redis (30 min TTL) and database until you sync
 - Weekly stats update when you sync after games complete
+- To force fresh data: Clear Redis cache or wait for TTL expiry
 
 ### Database Issues
 
@@ -529,14 +614,17 @@ docker exec -i fb_helper_db psql -U postgres fbyahoo < backup.sql
 
 ✅ **Solution:**
 ```bash
-# Check if database is running
+# Check if services are running
 docker compose ps
 
-# Start database if stopped
-docker compose up -d db
+# Start database and Redis if stopped
+docker compose up -d db redis
 
 # Check database logs
 docker compose logs db
+
+# Check Redis logs
+docker compose logs redis
 
 # Verify connection parameters in .env match docker-compose.yml
 ```
