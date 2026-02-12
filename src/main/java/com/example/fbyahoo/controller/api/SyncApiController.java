@@ -1,8 +1,10 @@
 package com.example.fbyahoo.controller.api;
 
+import com.example.fbyahoo.config.CacheNames;
 import com.example.fbyahoo.service.ingestion.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +48,18 @@ public class SyncApiController {
     }
 
     @PostMapping
+    @CacheEvict(
+            cacheNames = {
+                    CacheNames.LEAGUE_LIST,
+                    CacheNames.LEAGUE_DETAIL,
+                    CacheNames.LEAGUE_ROSTER,
+                    CacheNames.LEAGUE_AVAILABLE,
+                    CacheNames.LEAGUE_STANDINGS,
+                    CacheNames.LEAGUE_MATCHUP,
+                    CacheNames.LEAGUE_INSIGHTS
+            },
+            allEntries = true
+    )
     public ResponseEntity<Map<String, String>> sync() {
         log.info("API sync started");
         leagueIngestionService.ingestAllLeagues();
