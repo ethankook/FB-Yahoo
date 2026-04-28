@@ -12,7 +12,7 @@ A local-first Yahoo Fantasy Basketball analytics tool built with Spring Boot and
 - 💡 **Team Insights** - Identify your strongest and weakest categories
 - 🔄 **Data Sync** - One-click sync with Yahoo Fantasy API
 - 
-[Dashboard Image](Dashboard.png)
+![Dashboard Image](Dashboard.png)
 
 ## Tech Stack
 
