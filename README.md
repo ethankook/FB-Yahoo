@@ -11,6 +11,8 @@ A local-first Yahoo Fantasy Basketball analytics tool built with Spring Boot and
 - 🎯 **Player Recommendations** - Top available players by category (PTS, REB, AST, STL, BLK, etc.)
 - 💡 **Team Insights** - Identify your strongest and weakest categories
 - 🔄 **Data Sync** - One-click sync with Yahoo Fantasy API
+- 
+[Dashboard Image](Dashboard.png)
 
 ## Tech Stack
 
